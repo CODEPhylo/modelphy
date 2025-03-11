@@ -1,0 +1,26 @@
+// Basic HKY model with Yule tree prior
+// This example specifies an HKY substitution model with a Yule tree prior
+// and includes three primate sequences.
+
+// Define transition transversion ratio prior
+real kappa ~ lognormal(mean=1.0, sigma=0.5);
+
+// Define nucleotide frequency prior
+simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+
+// Create HKY substitution model
+substmodel subst_model = hky(kappa=kappa, freqs=pi);
+
+// Define birth rate and create Yule tree prior
+real birth_rate ~ exponential(mean=0.1);
+timetree phylogeny ~ yule(birthrate=birth_rate, n=3);
+
+// Create phylogenetic CTMC model
+alignment seq ~ phyloCTMC(tree=phylogeny, substmodel=subst_model);
+
+// Attach observed sequence data
+seq observe [ 
+  human = "ACGTACGTACGTACGTACGTACGT",
+  chimp = "ACGTACGTACGTACGTATGTACGT",
+  gorilla = "ACGTACGTACGCACGTACGTACGT"
+];

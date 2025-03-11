@@ -1,0 +1,46 @@
+// GTR+Gamma model with Birth-Death tree prior
+// This example demonstrates a GTR substitution model with Gamma rate heterogeneity
+// and a Birth-Death tree prior with data loaded from an external file.
+
+// Define nucleotide frequency prior
+simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+
+// Define GTR rate matrix parameters
+real a ~ exponential(mean=0.1);  // A<->C
+real b ~ exponential(mean=0.1);  // A<->G
+real c ~ exponential(mean=0.1);  // A<->T
+real d ~ exponential(mean=0.1);  // C<->G
+real e ~ exponential(mean=0.1);  // C<->T
+real f ~ exponential(mean=0.1);  // G<->T
+
+// Define gamma shape parameter for rate heterogeneity
+real alpha ~ exponential(mean=0.5);
+
+// Create GTR+Gamma substitution model with 4 rate categories
+substmodel subst_model = gtr(
+  rates=[a,b,c,d,e,f], 
+  freqs=pi, 
+  gamma=alpha, 
+  categories=4
+);
+
+// Define birth-death process parameters
+real birth_rate ~ exponential(mean=0.1);
+real death_rate ~ exponential(mean=0.05);
+
+// Create tree from birth-death process
+timetree phylogeny ~ birthdeath(
+  birthrate=birth_rate, 
+  deathrate=death_rate, 
+  n=10
+);
+
+// Create phylogenetic CTMC model
+alignment seq ~ phyloCTMC(
+  tree=phylogeny, 
+  substmodel=subst_model,
+  siterates=gamma(shape=alpha, categories=4)
+);
+
+// Attach observed sequence data from file
+seq observe from "data/primates.fasta";

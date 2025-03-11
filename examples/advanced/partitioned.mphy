@@ -1,0 +1,59 @@
+// Partitioned model with separate substitution models for coding regions
+// This example demonstrates a partitioned analysis with different substitution
+// models for 1st+2nd vs 3rd codon positions.
+
+// --- Shared parameters ---
+
+// Shared tree prior
+real birth_rate ~ exponential(mean=0.1);
+timetree phylogeny ~ yule(birthrate=birth_rate, n=10);
+
+// --- First partition (1st+2nd codon positions) ---
+
+// HKY model for 1st+2nd positions
+real kappa1 ~ lognormal(mean=1.0, sigma=0.5);
+simplex pi1 ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+substmodel subst_model1 = hky(kappa=kappa1, freqs=pi1);
+
+// Gamma rate heterogeneity for 1st+2nd positions
+real alpha1 ~ exponential(mean=0.5);
+
+// CTMC for 1st+2nd positions
+alignment seq1 ~ phyloCTMC(
+  tree=phylogeny, 
+  substmodel=subst_model1,
+  siterates=gamma(shape=alpha1, categories=4)
+);
+
+// --- Second partition (3rd codon positions) ---
+
+// GTR model for 3rd positions (faster evolution)
+simplex pi2 ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+
+real a ~ exponential(mean=0.1);
+real b ~ exponential(mean=0.1);
+real c ~ exponential(mean=0.1);
+real d ~ exponential(mean=0.1);
+real e ~ exponential(mean=0.1);
+real f ~ exponential(mean=0.1);
+
+substmodel subst_model2 = gtr(
+  rates=[a,b,c,d,e,f], 
+  freqs=pi2
+);
+
+// Gamma rate heterogeneity for 3rd positions
+real alpha2 ~ exponential(mean=0.5);
+
+// CTMC for 3rd positions
+alignment seq2 ~ phyloCTMC(
+  tree=phylogeny, 
+  substmodel=subst_model2,
+  siterates=gamma(shape=alpha2, categories=4)
+);
+
+// --- Data loading ---
+
+// Observe sequences from separate alignment files
+seq1 observe from "data/primates_12pos.fasta";
+seq2 observe from "data/primates_3pos.fasta";

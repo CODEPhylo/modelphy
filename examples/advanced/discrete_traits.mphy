@@ -1,0 +1,94 @@
+// Discrete trait evolution model
+// This example demonstrates a model for the evolution of a discrete trait
+// (geographic location) along with sequence evolution.
+
+// --- Substitution Model for Sequence Data ---
+
+// GTR substitution model
+simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+real a ~ exponential(mean=0.1);
+real b ~ exponential(mean=0.1);
+real c ~ exponential(mean=0.1);
+real d ~ exponential(mean=0.1);
+real e ~ exponential(mean=0.1);
+real f ~ exponential(mean=0.1);
+
+substmodel seq_model = gtr(
+  rates=[a,b,c,d,e,f], 
+  freqs=pi
+);
+
+// --- Tree Prior ---
+
+// Birth-death parameters
+real birth_rate ~ exponential(mean=0.1);
+real death_rate ~ exponential(mean=0.05);
+
+// Create birth-death tree
+timetree phylogeny ~ birthdeath(
+  birthrate=birth_rate, 
+  deathrate=death_rate, 
+  n=20
+);
+
+// --- Trait Evolution Model ---
+
+// Define possible geographic regions
+string[] regions = ["Africa", "Asia", "Europe", "North_America"];
+
+// Asymmetric transition rates between regions
+matrix q_matrix ~ ctmc_rate_matrix(
+  dimension=4,
+  prior=exponential(mean=0.1)
+);
+
+// Trait substitution model
+substmodel trait_model = discrete_trait(
+  states=regions,
+  rates=q_matrix
+);
+
+// --- Trait Data ---
+
+// Simulate trait evolution
+alignment geo_traits ~ discreteTraitCTMC(
+  tree=phylogeny,
+  substmodel=trait_model
+);
+
+// --- Sequence Data ---
+
+// Create phylogenetic CTMC model for sequences
+alignment seq ~ phyloCTMC(
+  tree=phylogeny, 
+  substmodel=seq_model
+);
+
+// --- Data Loading ---
+
+// Observe trait data
+geo_traits observe [
+  "taxon1" = "Africa",
+  "taxon2" = "Africa",
+  "taxon3" = "Asia",
+  "taxon4" = "Asia",
+  "taxon5" = "Asia",
+  "taxon6" = "Europe",
+  "taxon7" = "Europe",
+  "taxon8" = "Europe",
+  "taxon9" = "North_America",
+  "taxon10" = "North_America",
+  "taxon11" = "Africa",
+  "taxon12" = "Asia",
+  "taxon13" = "Asia",
+  "taxon14" = "Europe",
+  "taxon15" = "North_America",
+  "taxon16" = "North_America",
+  "taxon17" = "Asia",
+  "taxon18" = "Europe",
+  "taxon19" = "Europe",
+  "taxon20" = "North_America"
+];
+
+// Observe sequence data from file
+seq observe from "data/virus_sequences.fasta";
