@@ -5,55 +5,56 @@
 // --- Shared parameters ---
 
 // Shared tree prior
-real birth_rate ~ exponential(mean=0.1);
-timetree phylogeny ~ yule(birthrate=birth_rate, n=10);
+PositiveReal birthRate ~ Exponential(rate=10.0);
+TimeTree phylogeny ~ Yule(birthRate=birthRate);
 
 // --- First partition (1st+2nd codon positions) ---
 
 // HKY model for 1st+2nd positions
-real kappa1 ~ lognormal(mean=1.0, sigma=0.5);
-simplex pi1 ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
-substmodel subst_model1 = hky(kappa=kappa1, freqs=pi1);
+PositiveReal kappa1 ~ LogNormal(meanlog=1.0, sdlog=0.5);
+Simplex baseFreqs1 ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+QMatrix substModel1 = HKY(kappa=kappa1, baseFrequencies=baseFreqs1);
 
 // Gamma rate heterogeneity for 1st+2nd positions
-real alpha1 ~ exponential(mean=0.5);
+PositiveReal alpha1 ~ Exponential(rate=2.0);
+Vector<PositiveReal> siteRates1 = DiscreteGamma(shape=alpha1, categories=4);
 
 // CTMC for 1st+2nd positions
-alignment seq1 ~ phyloCTMC(
+Alignment sequences1 ~ PhyloCTMC(
   tree=phylogeny, 
-  substmodel=subst_model1,
-  siterates=gamma(shape=alpha1, categories=4)
+  Q=substModel1,
+  siteRates=siteRates1
 );
 
 // --- Second partition (3rd codon positions) ---
 
 // GTR model for 3rd positions (faster evolution)
-simplex pi2 ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex baseFreqs2 ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
-real a ~ exponential(mean=0.1);
-real b ~ exponential(mean=0.1);
-real c ~ exponential(mean=0.1);
-real d ~ exponential(mean=0.1);
-real e ~ exponential(mean=0.1);
-real f ~ exponential(mean=0.1);
+// Define GTR rate matrix parameters
+Vector<PositiveReal> rateParams ~ Vector<Exponential>(
+  rate=10.0,
+  dimension=6
+);
 
-substmodel subst_model2 = gtr(
-  rates=[a,b,c,d,e,f], 
-  freqs=pi2
+QMatrix substModel2 = GTR(
+  rateMatrix=rateParams, 
+  baseFrequencies=baseFreqs2
 );
 
 // Gamma rate heterogeneity for 3rd positions
-real alpha2 ~ exponential(mean=0.5);
+PositiveReal alpha2 ~ Exponential(rate=2.0);
+Vector<PositiveReal> siteRates2 = DiscreteGamma(shape=alpha2, categories=4);
 
 // CTMC for 3rd positions
-alignment seq2 ~ phyloCTMC(
+Alignment sequences2 ~ PhyloCTMC(
   tree=phylogeny, 
-  substmodel=subst_model2,
-  siterates=gamma(shape=alpha2, categories=4)
+  Q=substModel2,
+  siteRates=siteRates2
 );
 
 // --- Data loading ---
 
 // Observe sequences from separate alignment files
-seq1 observe from "data/primates_12pos.fasta";
-seq2 observe from "data/primates_3pos.fasta";
+sequences1 observe from "data/primates_12pos.fasta";
+sequences2 observe from "data/primates_3pos.fasta";

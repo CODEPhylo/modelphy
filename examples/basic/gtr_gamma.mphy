@@ -1,46 +1,53 @@
-// GTR+Gamma model with Birth-Death tree prior
+// GTR+Gamma model with Birth-Death tree prior (PhyloSpec-aligned)
 // This example demonstrates a GTR substitution model with Gamma rate heterogeneity
 // and a Birth-Death tree prior with data loaded from an external file.
 
 // Define nucleotide frequency prior
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex baseFreqs ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
-// Define GTR rate matrix parameters
-real a ~ exponential(mean=0.1);  // A<->C
-real b ~ exponential(mean=0.1);  // A<->G
-real c ~ exponential(mean=0.1);  // A<->T
-real d ~ exponential(mean=0.1);  // C<->G
-real e ~ exponential(mean=0.1);  // C<->T
-real f ~ exponential(mean=0.1);  // G<->T
+// Define GTR rate matrix parameters as a vector
+Vector<PositiveReal> rateMatrix ~ Vector<Exponential>(
+  rate=10.0,
+  dimension=6
+);
 
 // Define gamma shape parameter for rate heterogeneity
-real alpha ~ exponential(mean=0.5);
+PositiveReal shape ~ Exponential(rate=2.0);
 
-// Create GTR+Gamma substitution model with 4 rate categories
-substmodel subst_model = gtr(
-  rates=[a,b,c,d,e,f], 
-  freqs=pi, 
-  gamma=alpha, 
-  categories=4
+// Create GTR substitution model
+QMatrix substModel = GTR(
+  rateMatrix=rateMatrix, 
+  baseFrequencies=baseFreqs
 );
 
 // Define birth-death process parameters
-real birth_rate ~ exponential(mean=0.1);
-real death_rate ~ exponential(mean=0.05);
+PositiveReal birthRate ~ Exponential(rate=10.0);
+PositiveReal deathRate ~ Exponential(rate=20.0);
 
 // Create tree from birth-death process
-timetree phylogeny ~ birthdeath(
-  birthrate=birth_rate, 
-  deathrate=death_rate, 
-  n=10
+Tree phylogeny ~ BirthDeath(
+  birthRate=birthRate, 
+  deathRate=deathRate
+);
+
+// Create site rate distribution
+Vector<PositiveReal> siteRates = DiscreteGamma(
+  shape=shape, 
+  categories=4
 );
 
 // Create phylogenetic CTMC model
-alignment seq ~ phyloCTMC(
+Alignment<Nucleotide> sequences ~ PhyloCTMC(
   tree=phylogeny, 
-  substmodel=subst_model,
-  siterates=gamma(shape=alpha, categories=4)
+  Q=substModel,
+  siteRates=siteRates
 );
 
 // Attach observed sequence data from file
-seq observe from "data/primates.fasta";
+sequences observe from "data/primates.fasta";
+
+// Add constraint that birth rate exceeds death rate
+constraint bdConstraint = GreaterThan(
+  left=birthRate, 
+  right=deathRate
+);

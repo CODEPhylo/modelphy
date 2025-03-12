@@ -1,26 +1,35 @@
 // Basic HKY model with Yule tree prior
 // This example specifies an HKY substitution model with a Yule tree prior
-// and includes three primate sequences.
 
-// Define transition transversion ratio prior
-real kappa ~ lognormal(mean=1.0, sigma=0.5);
+// Define transition/transversion ratio prior
+PositiveReal kappa ~ LogNormal(meanlog=1.0, sdlog=0.5);
 
 // Define nucleotide frequency prior
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex baseFreqs ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
 // Create HKY substitution model
-substmodel subst_model = hky(kappa=kappa, freqs=pi);
+QMatrix substModel = HKY(kappa=kappa, baseFrequencies=baseFreqs);
 
 // Define birth rate and create Yule tree prior
-real birth_rate ~ exponential(mean=0.1);
-timetree phylogeny ~ yule(birthrate=birth_rate, n=3);
+PositiveReal birthRate ~ Exponential(rate=10.0);
+Tree phylogeny ~ Yule(birthRate=birthRate);
+
+// Create rate variation across sites
+Vector siteRates = DiscreteGamma(shape=0.5, categories=4);
 
 // Create phylogenetic CTMC model
-alignment seq ~ phyloCTMC(tree=phylogeny, substmodel=subst_model);
+Alignment sequences ~ PhyloCTMC(
+  tree=phylogeny, 
+  Q=substModel,
+  siteRates=siteRates
+);
 
 // Attach observed sequence data
-seq observe [ 
+sequences observe [ 
   human = "ACGTACGTACGTACGTACGTACGT",
   chimp = "ACGTACGTACGTACGTATGTACGT",
   gorilla = "ACGTACGTACGCACGTACGTACGT"
 ];
+
+// Add constraint on birth rate
+constraint birthRateConstraint = LessThan(left=birthRate, right=10.0);

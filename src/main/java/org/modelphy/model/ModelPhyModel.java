@@ -99,7 +99,7 @@ public class ModelPhyModel {
      */
     public List<Variable> getTreeVariables() {
         return variables.stream()
-            .filter(v -> v.getType().equals("tree") || v.getType().equals("timetree"))
+            .filter(v -> v.getType().equals("Tree") || v.getType().equals("TimeTree"))
             .toList();
     }
     
@@ -108,7 +108,7 @@ public class ModelPhyModel {
      */
     public List<Variable> getAlignmentVariables() {
         return variables.stream()
-            .filter(v -> v.getType().equals("alignment"))
+            .filter(v -> v.getType().equals("Alignment"))
             .toList();
     }
     
@@ -117,7 +117,7 @@ public class ModelPhyModel {
      */
     public List<Variable> getSimplexVariables() {
         return variables.stream()
-            .filter(v -> v.getType().equals("simplex"))
+            .filter(v -> v.getType().equals("Simplex"))
             .toList();
     }
     
@@ -126,7 +126,7 @@ public class ModelPhyModel {
      */
     public List<Variable> getRealVariables() {
         return variables.stream()
-            .filter(v -> v.getType().equals("real"))
+            .filter(v -> v.getType().equals("Real") || v.getType().equals("PositiveReal"))
             .toList();
     }
     
@@ -135,7 +135,7 @@ public class ModelPhyModel {
      */
     public List<Variable> getSubstitutionModelVariables() {
         return variables.stream()
-            .filter(v -> v.getType().equals("substmodel"))
+            .filter(v -> v.getType().equals("QMatrix"))
             .toList();
     }
     

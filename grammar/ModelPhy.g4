@@ -1,6 +1,6 @@
 /**
- * ModelPhy Language Grammar
- * ANTLR4 Grammar for parsing ModelPhy files
+ * ModelPhy Language Grammar (PhyloSpec-aligned)
+ * ANTLR4 Grammar for parsing ModelPhy files conforming to PhyloSpec
  */
 
 grammar ModelPhy;
@@ -24,33 +24,33 @@ statement
     ;
 
 constraintStatement
-    : 'constraint' identifier '=' functionCall ';'
+    : CONSTRAINT identifier EQUALS functionCall SEMICOLON
     ;
 
 declaration
-    : type identifier ('=' expression)? ';'
+    : type identifier (EQUALS expression)? SEMICOLON
     ;
 
 stochasticAssignment
-    : type identifier '~' distribution ';'
-    | functionCall '~' distribution ';'  // For MRCA constraints
+    : type identifier TILDE distribution SEMICOLON
+    | functionCall TILDE distribution SEMICOLON  // For MRCA constraints
     ;
 
 deterministicAssignment
-    : type identifier '=' expression ';'
+    : type identifier EQUALS expression SEMICOLON
     ;
 
 observationStatement
-    : identifier 'observe' '[' keyValueList ']' ';'
-    | identifier 'observe' 'from' STRING_LITERAL ';'
+    : identifier OBSERVE LBRACKET keyValueList RBRACKET SEMICOLON
+    | identifier OBSERVE FROM STRING_LITERAL SEMICOLON
     ;
 
 keyValueList
-    : keyValue (',' keyValue)*
+    : keyValue (COMMA keyValue)*
     ;
 
 keyValue
-    : identifier '=' value=expression
+    : identifier EQUALS value=expression
     ;
 
 expression
@@ -58,68 +58,73 @@ expression
     | identifier                                   # IdentifierExpr
     | functionCall                                 # FunctionCallExpr
     | arrayLiteral                                 # ArrayExpr
-    | '(' expression ')'                           # ParenExpr
+    | LPAREN expression RPAREN                     # ParenExpr
     ;
 
 functionCall
-    : identifier '(' namedArgumentList? ')'
+    : identifier LPAREN namedArgumentList? RPAREN
     ;
 
 namedArgumentList
-    : namedArgument (',' namedArgument)*
+    : namedArgument (COMMA namedArgument)*
     ;
 
 namedArgument
-    : name=anyIdentifier '=' value=expression
+    : name=anyIdentifier EQUALS value=expression
     ;
 
 distribution
-    : identifier '(' namedArgumentList? ')'
+    : identifier (LPAREN namedArgumentList? RPAREN)?
     ;
 
 // Allow any identifier (including type names) when used as parameter names
 anyIdentifier
     : IDENTIFIER
-    | 'real'
-    | 'integer'
-    | 'boolean'
-    | 'string'
-    | 'simplex'
-    | 'vector'
-    | 'matrix'
-    | 'timetree'
-    | 'tree'
-    | 'alignment'
-    | 'sequence'
-    | 'substmodel'
+    | basicType
     ;
 
 type
-    : 'real'
-    | 'integer'
-    | 'boolean'
-    | 'string'
-    | 'simplex'
-    | 'vector'
-    | 'matrix'
-    | 'timetree'
-    | 'tree'
-    | 'alignment'
-    | 'sequence'
-    | 'substmodel'
+    : basicType
+    | parameterizedType
     | arrayType
     ;
 
-arrayType
-    : baseType '[' ']'
+basicType
+    : REAL
+    | INTEGER
+    | BOOLEAN
+    | STRING
+    | SIMPLEX
+    | VECTOR
+    | MATRIX
+    | TIME_TREE
+    | TREE
+    | ALIGNMENT
+    | SEQUENCE
+    | Q_MATRIX
+    | POSITIVE_REAL
+    | PROBABILITY
+    | TAXON
+    | TAXON_SET
+    | TREE_NODE
     ;
 
-baseType
-    : 'real'
-    | 'integer'
-    | 'boolean'
-    | 'string'
-    | identifier  // For user-defined types
+parameterizedType
+    : simpleType LT type (COMMA type)* GT
+    ;
+
+simpleType
+    : VECTOR
+    | MATRIX
+    | MAP
+    | SEQUENCE
+    | ALIGNMENT
+    | IDENTIFIER  // For user-defined parameterized types
+    ;
+
+arrayType
+    : basicType ARRAY_SUFFIX
+    | parameterizedType ARRAY_SUFFIX
     ;
 
 literal
@@ -130,7 +135,7 @@ literal
     ;
 
 arrayLiteral
-    : '[' (expression (',' expression)*)? ']'
+    : LBRACKET (expression (COMMA expression)*)? RBRACKET
     ;
 
 identifier
@@ -138,6 +143,44 @@ identifier
     ;
 
 // Lexer Rules
+
+// Keywords
+CONSTRAINT  : 'constraint';
+OBSERVE     : 'observe';
+FROM        : 'from';
+
+// Type Keywords
+REAL        : 'Real';
+INTEGER     : 'Integer';
+BOOLEAN     : 'Boolean';
+STRING      : 'String';
+SIMPLEX     : 'Simplex';
+VECTOR      : 'Vector';
+MATRIX      : 'Matrix';
+TIME_TREE   : 'TimeTree';
+TREE        : 'Tree';
+ALIGNMENT   : 'Alignment';
+SEQUENCE    : 'Sequence';
+Q_MATRIX    : 'QMatrix';
+POSITIVE_REAL : 'PositiveReal';
+PROBABILITY : 'Probability';
+TAXON       : 'Taxon';
+TAXON_SET   : 'TaxonSet';
+TREE_NODE   : 'TreeNode';
+MAP         : 'Map';
+
+// Operators and punctuation
+TILDE       : '~';
+EQUALS      : '=';
+SEMICOLON   : ';';
+COMMA       : ',';
+LPAREN      : '(';
+RPAREN      : ')';
+LBRACKET    : '[';
+RBRACKET    : ']';
+LT          : '<';
+GT          : '>';
+ARRAY_SUFFIX : '[]';
 
 BOOLEAN_LITERAL
     : 'true'
@@ -161,8 +204,13 @@ STRING_LITERAL
     : '"' ('\\"' | ~["])* '"'
     ;
 
-COMMENT
+// Fixed comment rule with skip at the very end of each alternative
+LINE_COMMENT
     : '//' ~[\r\n]* -> skip
+    ;
+
+BLOCK_COMMENT
+    : '/*' .*? '*/' -> skip
     ;
 
 WS

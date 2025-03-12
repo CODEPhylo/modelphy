@@ -5,56 +5,71 @@
 // --- Substitution Model ---
 
 // HKY substitution model
-real kappa ~ lognormal(mean=1.0, sigma=0.5);
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
-substmodel subst_model = hky(kappa=kappa, freqs=pi);
+PositiveReal kappa ~ LogNormal(meanlog=1.0, sdlog=0.5);
+Simplex baseFreqs ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+QMatrix substModel = HKY(kappa=kappa, baseFrequencies=baseFreqs);
 
 // --- Clock Model ---
 
 // Mean clock rate
-real clock_mean ~ lognormal(mean=-7.0, sigma=0.5);
+Real clockMean ~ LogNormal(meanlog=-7.0, sdlog=0.5);
 
 // Standard deviation of the lognormal relaxed clock
-real clock_sd ~ exponential(mean=0.1);
+PositiveReal clockSd ~ Exponential(rate=10.0);
 
 // --- Tree Prior with Calibrations ---
 
 // Birth-death parameters
-real birth_rate ~ exponential(mean=10.0);
-real death_rate ~ exponential(mean=5.0);
+PositiveReal birthRate ~ Exponential(rate=0.1);
+PositiveReal deathRate ~ Exponential(rate=0.2);
 
 // Define calibration constraints
-constraint human_chimp = mrca(taxa=["human", "chimp"]);
-human_chimp ~ uniform(min=5.0, max=7.0);
+TreeNode humanChimpNode = MRCA(taxa=["human", "chimp"]);
+constraint humanChimpAge = Bounded(
+  variable=NodeAge(node=humanChimpNode),
+  lower=5.0,
+  upper=7.0
+);
 
-constraint apes = mrca(taxa=["human", "chimp", "gorilla", "orangutan", "gibbon"]);
-apes ~ uniform(min=23.0, max=34.0);
+TreeNode apesNode = MRCA(taxa=["human", "chimp", "gorilla", "orangutan", "gibbon"]);
+constraint apesAge = Bounded(
+  variable=NodeAge(node=apesNode),
+  lower=23.0,
+  upper=34.0
+);
 
-constraint root_age = root();
-root_age ~ uniform(min=35.0, max=65.0);
+TreeNode rootNode = Root();
+constraint rootAge = Bounded(
+  variable=NodeAge(node=rootNode),
+  lower=35.0,
+  upper=65.0
+);
 
 // Create constrained tree with birth-death prior
-timetree phylogeny ~ calibrated_birthdeath(
-  birthrate=birth_rate,
-  deathrate=death_rate,
+TimeTree phylogeny ~ CalibratedBirthDeath(
+  birthRate=birthRate,
+  deathRate=deathRate,
   taxa=[
     "human", "chimp", "gorilla", "orangutan", 
     "gibbon", "macaque", "baboon", "marmoset"
   ],
-  constraints=[human_chimp, apes, root_age]
+  constraints=[humanChimpAge, apesAge, rootAge]
 );
 
 // --- Phylogenetic CTMC ---
 
+// Create branch rates using relaxed clock
+Vector<PositiveReal> branchRates = UncorrelatedLognormal(
+  mean=clockMean,
+  stdev=clockSd
+);
+
 // Create phylogenetic CTMC model with relaxed clock
-alignment seq ~ phyloCTMC(
+Alignment sequences ~ PhyloCTMC(
   tree=phylogeny,
-  substmodel=subst_model,
-  clockmodel=relaxed_lognormal(
-    mean=clock_mean,
-    sd=clock_sd
-  )
+  Q=substModel,
+  branchRates=branchRates
 );
 
 // Attach observed sequence data
-seq observe from "data/primates_cytb.fasta";
+sequences observe from "data/primates_cytb.fasta";

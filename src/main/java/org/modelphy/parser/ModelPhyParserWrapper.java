@@ -11,8 +11,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Parser wrapper for ModelPhy files. Implements a simple API for parsing ModelPhy
- * without exposing the ANTLR implementation details.
+ * Parser wrapper for PhyloSpec-aligned ModelPhy files. Implements a simple API for 
+ * parsing ModelPhy without exposing the ANTLR implementation details.
  */
 public class ModelPhyParserWrapper {
     
@@ -118,30 +118,96 @@ public class ModelPhyParserWrapper {
         public Object visitDeclaration(ModelPhyParser.DeclarationContext ctx) {
             if (debug) System.out.println("Visiting declaration: " + ctx.getText());
             
-            String type = ctx.type().getText();
+            String type = parseType(ctx.type());
             String id = ctx.identifier().getText();
-            
-            Variable var = new Variable(id, type);
             
             // If there's an initialization expression
             if (ctx.expression() != null) {
                 Object value = visit(ctx.expression());
-                var.setValue(value);
+                
+                // Check if this is a deterministic assignment (function call)
+                if (value instanceof FunctionCall) {
+                    DeterministicVariable var = new DeterministicVariable(id, type, (FunctionCall) value);
+                    variables.put(id, var);
+                    model.addDeterministicVariable(var);
+                } else {
+                    Variable var = new Variable(id, type);
+                    var.setValue(value);
+                    variables.put(id, var);
+                    model.addVariable(var);
+                }
+            } else {
+                Variable var = new Variable(id, type);
+                variables.put(id, var);
+                model.addVariable(var);
             }
             
-            variables.put(id, var);
-            model.addVariable(var);
-            
             return null;
+        }        
+        
+        /**
+         * Parse a type expression into a string representation.
+         * Handles basic types, parameterized types, and array types.
+         */
+        private String parseType(ModelPhyParser.TypeContext ctx) {
+            if (ctx.basicType() != null) {
+                return ctx.basicType().getText();
+            } else if (ctx.parameterizedType() != null) {
+                ModelPhyParser.ParameterizedTypeContext ptCtx = ctx.parameterizedType();
+                StringBuilder sb = new StringBuilder();
+                sb.append(ptCtx.simpleType().getText());
+                sb.append('<');
+                
+                List<ModelPhyParser.TypeContext> typeParams = ptCtx.type();
+                for (int i = 0; i < typeParams.size(); i++) {
+                    if (i > 0) {
+                        sb.append(',');
+                    }
+                    sb.append(parseType(typeParams.get(i)));
+                }
+                
+                sb.append('>');
+                return sb.toString();
+            } else if (ctx.arrayType() != null) {
+                ModelPhyParser.ArrayTypeContext arrayCtx = ctx.arrayType();
+                if (arrayCtx.basicType() != null) {
+                    return arrayCtx.basicType().getText() + "[]";
+                } else if (arrayCtx.parameterizedType() != null) {
+                    // Instead of using getParent(), directly access the parameterized type
+                    return parseParameterizedType(arrayCtx.parameterizedType()) + "[]";
+                }
+            }
+            
+            return "Unknown";
         }
         
+        /**
+         * Parse a parameterized type into a string representation.
+         */
+        private String parseParameterizedType(ModelPhyParser.ParameterizedTypeContext ptCtx) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(ptCtx.simpleType().getText());
+            sb.append('<');
+            
+            List<ModelPhyParser.TypeContext> typeParams = ptCtx.type();
+            for (int i = 0; i < typeParams.size(); i++) {
+                if (i > 0) {
+                    sb.append(',');
+                }
+                sb.append(parseType(typeParams.get(i)));
+            }
+            
+            sb.append('>');
+            return sb.toString();
+        } 
+           
         @Override
         public Object visitStochasticAssignment(ModelPhyParser.StochasticAssignmentContext ctx) {
             if (debug) System.out.println("Visiting stochastic assignment: " + ctx.getText());
             
             // Handle both variable ~ distribution and functionCall ~ distribution
             if (ctx.identifier() != null) {
-                String type = ctx.type().getText();
+                String type = parseType(ctx.type());
                 String id = ctx.identifier().getText();
                 Distribution dist = (Distribution) visit(ctx.distribution());
                 
@@ -165,7 +231,7 @@ public class ModelPhyParserWrapper {
         public Object visitDeterministicAssignment(ModelPhyParser.DeterministicAssignmentContext ctx) {
             if (debug) System.out.println("Visiting deterministic assignment: " + ctx.getText());
             
-            String type = ctx.type().getText();
+            String type = parseType(ctx.type());
             String id = ctx.identifier().getText();
             Object expr = visit(ctx.expression());
             
@@ -224,17 +290,8 @@ public class ModelPhyParserWrapper {
                         // Handle function calls (like sequence)
                         else if (value instanceof FunctionCall) {
                             FunctionCall func = (FunctionCall) value;
-                            if (func.getName().equals("sequence")) {
-                                // Extract the string value from the sequence function
-                                for (Argument arg : func.getArguments()) {
-                                    if ("str".equals(arg.getName()) && arg.getValue() instanceof String) {
-                                        obs.addKeyValue(key, arg.getValue());
-                                        break;
-                                    }
-                                }
-                            } else {
-                                obs.addKeyValue(key, value);
-                            }
+                            // Just store the function call directly - no special handling for sequence
+                            obs.addKeyValue(key, value);
                         }
                         // Handle other types
                         else {
