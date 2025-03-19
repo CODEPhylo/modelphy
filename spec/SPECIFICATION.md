@@ -55,25 +55,25 @@ value         ::= numeric_literal | string_literal | array_literal | identifier
 
 ModelPhy defines the following basic types:
 
-- `real`: A continuous real number
-- `integer`: A discrete integer
-- `boolean`: A truth value (true or false)
-- `string`: A sequence of characters
-- `simplex`: A vector of non-negative real numbers that sum to 1
-- `vector`: An ordered collection of numeric values
-- `matrix`: A two-dimensional collection of numeric values
-- `timetree`: A phylogenetic tree with branch lengths representing time
-- `tree`: A general phylogenetic tree structure
-- `alignment`: A collection of aligned sequences
-- `sequence`: A single biological sequence
-- `substmodel`: A substitution model defining transition probabilities between states
+- `Real`: A continuous real number
+- `Integer`: A discrete integer
+- `Boolean`: A truth value (true or false)
+- `String`: A sequence of characters
+- `Simplex`: A vector of non-negative real numbers that sum to 1
+- `Vector`: An ordered collection of numeric values
+- `Matrix`: A two-dimensional collection of numeric values
+- `TimeTree`: A phylogenetic tree with branch lengths representing time
+- `Tree`: A general phylogenetic tree structure
+- `Alignment`: A collection of aligned sequences
+- `Sequence`: A single biological sequence
+- `QMatrix`: A substitution model defining transition probabilities between states
 
 ### Array Types
 
 Arrays of any base type can be specified using square brackets:
-- `real[]`: An array of real numbers
-- `integer[]`: An array of integers
-- `string[]`: An array of strings
+- `Real[]`: An array of real numbers
+- `Integer[]`: An array of integers
+- `String[]`: An array of strings
 - `<type>[]`: An array of any defined type
 
 ## Statements
@@ -146,11 +146,11 @@ distribution ::= identifier '(' (argument (',' argument)*)? ')'
 ```
 
 Common distributions include:
-- `normal(mean, sd)`
-- `lognormal(mean, sigma)`
-- `exponential(mean)`
-- `dirichlet(alpha)`
-- `uniform(min, max)`
+- `Normal(mean, sd)`
+- `LogNormal(mean, sigma)`
+- `Exponential(mean)`
+- `Dirichlet(alpha)`
+- `Uniform(min, max)`
 
 ## Examples
 
@@ -158,26 +158,26 @@ Common distributions include:
 
 ```
 // Define transition transversion ratio prior
-real kappa ~ lognormal(mean=1.0, sigma=0.5);
+Real kappa ~ LogNormal(mean=1.0, sigma=0.5);
 
 // Define nucleotide frequency prior
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex pi ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
 // Create HKY substitution model
-substmodel subst_model = hky(kappa=kappa, freqs=pi);
+QMatrix subst_model = HKY(kappa=kappa, freqs=pi);
 
 // Define birth rate and create Yule tree prior
-real birth_rate ~ exponential(mean=0.1);
-timetree phylogeny ~ yule(birthrate=birth_rate, n=3);
+Real birth_rate ~ Exponential(mean=0.1);
+TimeTree phylogeny ~ Yule(birthrate=birth_rate, n=3);
 
 // Create phylogenetic CTMC model
-alignment seq ~ phyloCTMC(tree=phylogeny, substmodel=subst_model);
+Alignment seq ~ PhyloCTMC(tree=phylogeny, substModel=subst_model);
 
 // Attach observed sequence data
 seq observe [ 
-  human = sequence(str="ACGTACGTACGTACGTACGTACGT"),
-  chimp = sequence(str="ACGTACGTACGTACGTATGTACGT"),
-  gorilla = sequence(str="ACGTACGTACGCACGTACGTACGT")
+  human = Sequence(str="ACGTACGTACGTACGTACGTACGT"),
+  chimp = Sequence(str="ACGTACGTACGTACGTATGTACGT"),
+  gorilla = Sequence(str="ACGTACGTACGCACGTACGTACGT")
 ];
 ```
 
@@ -185,31 +185,31 @@ seq observe [
 
 ```
 // Define nucleotide frequency prior
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex pi ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
 // Define GTR rate matrix parameters
-real a ~ exponential(mean=0.1);
-real b ~ exponential(mean=0.1);
-real c ~ exponential(mean=0.1);
-real d ~ exponential(mean=0.1);
-real e ~ exponential(mean=0.1);
-real f ~ exponential(mean=0.1);
+Real a ~ Exponential(mean=0.1);
+Real b ~ Exponential(mean=0.1);
+Real c ~ Exponential(mean=0.1);
+Real d ~ Exponential(mean=0.1);
+Real e ~ Exponential(mean=0.1);
+Real f ~ Exponential(mean=0.1);
 
 // Define gamma shape parameter
-real alpha ~ exponential(mean=0.5);
+Real alpha ~ Exponential(mean=0.5);
 
 // Create GTR+Gamma substitution model
-substmodel subst_model = gtr(rates=[a,b,c,d,e,f], freqs=pi, gamma=alpha, categories=4);
+QMatrix subst_model = GTR(rates=[a,b,c,d,e,f], freqs=pi, gamma=alpha, categories=4);
 
 // Define birth-death process parameters
-real birth_rate ~ exponential(mean=0.1);
-real death_rate ~ exponential(mean=0.05);
+Real birth_rate ~ Exponential(mean=0.1);
+Real death_rate ~ Exponential(mean=0.05);
 
 // Create tree from birth-death process
-timetree phylogeny ~ birthdeath(birthrate=birth_rate, deathrate=death_rate, n=10);
+TimeTree phylogeny ~ BirthDeath(birthrate=birth_rate, deathrate=death_rate, n=10);
 
 // Create phylogenetic CTMC model
-alignment seq ~ phyloCTMC(tree=phylogeny, substmodel=subst_model);
+Alignment seq ~ PhyloCTMC(tree=phylogeny, substModel=subst_model);
 
 // Attach observed sequence data from file
 seq observe from "sequences.fasta";
@@ -309,18 +309,18 @@ argument
     ;
 
 type
-    : 'real'
-    | 'integer'
-    | 'boolean'
-    | 'string'
-    | 'simplex'
-    | 'vector'
-    | 'matrix'
-    | 'timetree'
-    | 'tree'
-    | 'alignment'
-    | 'sequence'
-    | 'substmodel'
+    : 'Real'
+    | 'Integer'
+    | 'Boolean'
+    | 'String'
+    | 'Simplex'
+    | 'Vector'
+    | 'Matrix'
+    | 'TimeTree'
+    | 'Tree'
+    | 'Alignment'
+    | 'Sequence'
+    | 'QMatrix'
     ;
 
 literal

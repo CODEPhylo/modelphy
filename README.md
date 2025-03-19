@@ -25,26 +25,26 @@ Currently, each software package (MrBayes, BEAST, RevBayes, etc.) has its own sy
 
 ```
 // Define transition transversion ratio prior
-real kappa ~ lognormal(mean=1.0, sigma=0.5);
+Real kappa ~ LogNormal(meanlog=1.0, sdlog=0.5);
 
 // Define nucleotide frequency prior
-simplex pi ~ dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
+Simplex pi ~ Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0]);
 
 // Create HKY substitution model
-substmodel subst_model = hky(kappa=kappa, freqs=pi);
+QMatrix subst_model = HKY(kappa=kappa, baseFrequencies=pi);
 
 // Define birth rate and create Yule tree prior
-real birth_rate ~ exponential(mean=0.1);
-timetree phylogeny ~ yule(birthrate=birth_rate, n=3);
+Real birth_rate ~ Exponential(mean=0.1);
+TimeTree phylogeny ~ Yule(birthrate=birth_rate, n=3);
 
 // Create phylogenetic CTMC model
-alignment seq ~ phyloCTMC(tree=phylogeny, substmodel=subst_model);
+Alignment seq ~ PhyloCTMC(tree=phylogeny, Q=subst_model);
 
 // Attach observed sequence data
 seq observe [ 
-  human = sequence(str="ACGTACGTACGTACGTACGTACGT"),
-  chimp = sequence(str="ACGTACGTACGTACGTATGTACGT"),
-  gorilla = sequence(str="ACGTACGTACGCACGTACGTACGT")
+  human = Sequence(str="ACGTACGTACGTACGTACGTACGT"),
+  chimp = Sequence(str="ACGTACGTACGTACGTATGTACGT"),
+  gorilla = Sequence(str="ACGTACGTACGCACGTACGTACGT")
 ];
 ```
 
