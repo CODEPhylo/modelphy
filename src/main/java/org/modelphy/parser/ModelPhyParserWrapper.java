@@ -22,6 +22,17 @@ public class ModelPhyParserWrapper {
     private boolean debug = false;
     
     /**
+     * Static convenience method to parse a model from a string.
+     * 
+     * @param content The ModelPhy content as a string
+     * @return The parsed model
+     */
+    public static ModelPhyModel parseModel(String content) {
+        ModelPhyParserWrapper parser = new ModelPhyParserWrapper();
+        return parser.parse(content);
+    }
+    
+    /**
      * Create a new ModelPhy parser.
      */
     public ModelPhyParserWrapper() {

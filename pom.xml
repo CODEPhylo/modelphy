@@ -46,6 +46,19 @@
             <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
+        <!-- LSP4J - Eclipse implementation of the LSP -->
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>org.eclipse.lsp4j</artifactId>
+            <version>0.20.1</version>
+        </dependency>
+        
+        <!-- LSP4J JSON processing -->
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>org.eclipse.lsp4j.jsonrpc</artifactId>
+            <version>0.20.1</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -73,6 +86,75 @@
                             <sourceDirectory>${basedir}/grammar</sourceDirectory>
                             <visitor>true</visitor>
                             <listener>true</listener>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Assembly plugin to create executable JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <!-- Original jar with dependencies -->
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>org.modelphy.Main</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                    <!-- LSP server specific jar -->
+                    <execution>
+                        <id>lsp-server-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>org.modelphy.lsp.Main</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                            <finalName>modelphy-lsp-server</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copy JAR to VS Code extension server directory -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.basedir}/modelphy-vscode/server"/>
+                                <copy file="${project.build.directory}/modelphy-lsp-server.jar"
+                                      todir="${project.basedir}/modelphy-vscode/server"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>

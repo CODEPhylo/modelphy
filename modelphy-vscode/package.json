@@ -1,0 +1,67 @@
+{
+  "name": "modelphy-vscode",
+  "displayName": "ModelPhy Language Support",
+  "description": "ModelPhy language support for VS Code",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "publisher": "modelphy",
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:modelphy"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "modelphy",
+        "aliases": [
+          "ModelPhy",
+          "modelphy"
+        ],
+        "extensions": [
+          ".mphy"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "modelphy",
+        "scopeName": "source.modelphy",
+        "path": "./syntaxes/modelphy.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "ModelPhy",
+      "properties": {
+        "modelphy.validate.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable validation for ModelPhy files"
+        },
+        "modelphy.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to modelphy-lsp-server.jar (leave empty to use bundled server)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run lint",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.47.0",
+    "@types/vscode": "^1.60.0",
+    "@types/node": "^16.11.7"
+  }
+}
