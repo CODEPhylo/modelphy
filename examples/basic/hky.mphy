@@ -18,11 +18,7 @@ Tree phylogeny ~ Yule(birthRate=birthRate);
 Vector siteRates = DiscreteGamma(shape=0.5, categories=4);
 
 // Create phylogenetic CTMC model
-Alignment sequences ~ PhyloCTMC(
-  tree=phylogeny, 
-  Q=substModel,
-  siteRates=siteRates
-);
+Alignment sequences ~ PhyloCTMC(tree=phylogeny, Q=substmodel, siteRate=siteRates);
 
 // Attach observed sequence data
 sequences observe [ 

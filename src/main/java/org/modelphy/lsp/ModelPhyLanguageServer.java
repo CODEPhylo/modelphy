@@ -2,6 +2,8 @@ package org.modelphy.lsp;
 
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
+import org.eclipse.lsp4j.SetTraceParams;
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams;
 import java.util.concurrent.CompletableFuture;
 import java.util.Arrays;
 
@@ -18,6 +20,8 @@ public class ModelPhyLanguageServer implements LanguageServer {
     
     @Override
     public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
+        System.out.println("Language server initializing...");
+        
         // Configure server capabilities
         ServerCapabilities capabilities = new ServerCapabilities();
         
@@ -26,7 +30,7 @@ public class ModelPhyLanguageServer implements LanguageServer {
         
         // Completion support
         CompletionOptions completionOptions = new CompletionOptions();
-        completionOptions.setTriggerCharacters(Arrays.asList(".", "(", "=", "~"));
+        completionOptions.setTriggerCharacters(Arrays.asList(".", "(", "=", "~", " "));
         capabilities.setCompletionProvider(completionOptions);
         
         // Hover support
@@ -49,6 +53,19 @@ public class ModelPhyLanguageServer implements LanguageServer {
     public LanguageClient getClient() {
         return this.client;
     }
+    
+    /**
+     * Sets the trace notification level.
+     * 
+     * @param params The trace notification parameters
+     */
+    public void setTrace(SetTraceParams params) {
+        // Just log that we received the notification
+        System.out.println("Trace level set to: " + params.getValue());
+        
+        // In a more complete implementation, you might use this to adjust 
+        // your debug logging level
+    }
 
     @Override
     public TextDocumentService getTextDocumentService() {
@@ -59,6 +76,12 @@ public class ModelPhyLanguageServer implements LanguageServer {
     public WorkspaceService getWorkspaceService() {
         return this.workspaceService;
     }
+
+    @Override
+    public void cancelProgress(WorkDoneProgressCancelParams params) {
+        // Log cancellation
+        System.out.println("Progress cancelled: " + params.getToken());
+    } 
 
     @Override
     public CompletableFuture<Object> shutdown() {

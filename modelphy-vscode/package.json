@@ -44,6 +44,17 @@
           "default": true,
           "description": "Enable/disable validation for ModelPhy files"
         },
+        "modelphy.completion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable code completion"
+        },
+        "modelphy.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the ModelPhy language server."
+        },
         "modelphy.server.path": {
           "type": "string",
           "default": "",

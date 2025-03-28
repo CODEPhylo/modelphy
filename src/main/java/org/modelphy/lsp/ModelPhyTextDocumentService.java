@@ -9,7 +9,8 @@ import org.modelphy.lsp.features.hover.HoverProvider;
 import org.modelphy.model.*;
 import org.modelphy.parser.ModelPhyParserWrapper;
 import java.util.ArrayList;
-
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,9 @@ public class ModelPhyTextDocumentService implements TextDocumentService {
     private final DiagnosticProvider diagnosticProvider;
     private final CompletionProvider completionProvider;
     private final HoverProvider hoverProvider;
+    // to track active requests
+    private final ConcurrentHashMap<String, CompletableFuture<?>> activeRequests = new ConcurrentHashMap<>();
+
 
     public ModelPhyTextDocumentService(ModelPhyLanguageServer server) {
         this.server = server;
@@ -32,6 +36,7 @@ public class ModelPhyTextDocumentService implements TextDocumentService {
 
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
+        System.out.println("Document opened: " + params.getTextDocument().getUri());
         String uri = params.getTextDocument().getUri();
         String text = params.getTextDocument().getText();
         documents.put(uri, text);
@@ -94,36 +99,70 @@ public class ModelPhyTextDocumentService implements TextDocumentService {
     }
 
     private void reportDiagnostics(String uri, String content) {
+        System.out.println("Reporting diagnostics for: " + uri);
         List<Diagnostic> diagnostics = diagnosticProvider.provideDiagnostics(content);
         server.getClient().publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics));
     }
 
     @Override
     public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
-        String uri = params.getTextDocument().getUri();
-        String content = documents.get(uri);
-        Position position = params.getPosition();
+        CompletableFuture<Either<List<CompletionItem>, CompletionList>> result = new CompletableFuture<>();
         
-        List<CompletionItem> items = completionProvider.provideCompletions(
-            content, 
-            position.getLine(), 
-            position.getCharacter()
-        );
+        // Create a simple item
+        List<CompletionItem> items = new ArrayList<>();
+        items.add(new CompletionItem("Test"));
         
-        return CompletableFuture.completedFuture(Either.forLeft(items));
-    }
-
+        // Complete the future immediately
+        result.complete(Either.forLeft(items));
+        
+        return result.exceptionally(e -> {
+            System.err.println("Completion error: " + e.getMessage());
+            e.printStackTrace();
+            return Either.forLeft(new ArrayList<>());
+        });
+    }    
+    
     @Override
     public CompletableFuture<Hover> hover(HoverParams params) {
         String uri = params.getTextDocument().getUri();
         String content = documents.get(uri);
         Position position = params.getPosition();
         
-        return CompletableFuture.completedFuture(
-            hoverProvider.provideHover(content, position.getLine(), position.getCharacter())
-        );
+        // Create a new future that can be canceled
+        final CompletableFuture<Hover> result = new CompletableFuture<>();
+        
+        // Register the request so it can be cancelled
+        String requestId = "hover-" + uri + "-" + System.currentTimeMillis();
+        activeRequests.put(requestId, result);
+        
+        // Execute the hover operation asynchronously
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                // Check for cancellation
+                if (result.isCancelled()) {
+                    throw new CancellationException("Hover request cancelled");
+                }
+                
+                // Process the hover request
+                return hoverProvider.provideHover(content, position.getLine(), position.getCharacter());
+            } finally {
+                // Remove the request when done
+                activeRequests.remove(requestId);
+            }
+        }).thenAccept(hover -> {
+            // Complete the future with the result
+            result.complete(hover);
+        }).exceptionally(e -> {
+            // Handle exceptions
+            if (!(e.getCause() instanceof CancellationException)) {
+                result.completeExceptionally(e);
+            }
+            return null;
+        });
+        
+        return result;
     }
-
+    
     private String applyChange(String content, TextDocumentContentChangeEvent change) {
         // Convert position to offset and apply the change
         // Implementation omitted for brevity

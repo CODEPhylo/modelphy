@@ -44,43 +44,31 @@ public class HoverProvider {
             String tokenText = tokenInfo.getText();
             String documentation = null;
             
-            switch (tokenInfo.getType()) {
-                case DISTRIBUTION:
-                    documentation = distributionDocs.get(tokenText);
-                    break;
-                case FUNCTION:
-                    documentation = functionDocs.get(tokenText);
-                    break;
-                case TYPE:
-                    documentation = typeDocs.get(tokenText);
-                    break;
-                default:
-                    // Look in all maps if we're not sure
-                    documentation = distributionDocs.get(tokenText);
-                    if (documentation == null) {
-                        documentation = functionDocs.get(tokenText);
-                    }
-                    if (documentation == null) {
-                        documentation = typeDocs.get(tokenText);
-                    }
-                    break;
-            }
+            // Look up documentation for the token
+            // ... [existing code] ...
             
             if (documentation != null) {
+                // Create a proper MarkupContent
                 MarkupContent markupContent = new MarkupContent();
                 markupContent.setKind(MarkupKind.MARKDOWN);
                 markupContent.setValue(documentation);
                 
-                Range range = new Range(
-                    new Position(tokenInfo.getStartLine(), tokenInfo.getStartCharacter()),
-                    new Position(tokenInfo.getEndLine(), tokenInfo.getEndCharacter())
-                );
+                // Create range if available
+                Range range = null;
+                if (tokenInfo.getStartLine() >= 0) {
+                    range = new Range(
+                        new Position(tokenInfo.getStartLine(), tokenInfo.getStartCharacter()),
+                        new Position(tokenInfo.getEndLine(), tokenInfo.getEndCharacter())
+                    );
+                }
                 
+                // Create and return the hover with content
                 return new Hover(markupContent, range);
             }
         }
         
-        return new Hover();
+        // If we get here, return an empty hover (NOT null)
+        return new Hover(new MarkupContent(MarkupKind.PLAINTEXT, ""));
     }
     
     private TokenInfo getTokenAtPosition(String content, int line, int character) {

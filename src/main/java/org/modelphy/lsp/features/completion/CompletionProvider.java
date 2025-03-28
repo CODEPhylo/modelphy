@@ -1,172 +1,216 @@
 package org.modelphy.lsp.features.completion;
 
-import org.antlr.v4.runtime.*;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
-import org.modelphy.antlr.ModelPhyLexer;
-import org.modelphy.antlr.ModelPhyParser;
+import org.eclipse.lsp4j.InsertTextFormat;
 
 import java.util.*;
 
 public class CompletionProvider {
-    // Predefined types from your grammar
-    private static final List<String> TYPES = Arrays.asList(
-        "Real", "Integer", "Boolean", "String", "Simplex", "Vector", "Matrix",
-        "TimeTree", "Tree", "Alignment", "Sequence", "QMatrix", "PositiveReal",
-        "Probability", "Taxon", "TaxonSet", "TreeNode"
-    );
+    // Predefined collections of completions
+    private final List<CompletionItem> typeCompletions = new ArrayList<>();
+    private final List<CompletionItem> distributionCompletions = new ArrayList<>();
+    private final List<CompletionItem> functionCompletions = new ArrayList<>();
+    private final List<CompletionItem> keywordCompletions = new ArrayList<>();
     
-    // Distributions from PhyloSpec
-    private static final List<String> DISTRIBUTIONS = Arrays.asList(
-        "Normal", "LogNormal", "Gamma", "Beta", "Exponential", "Dirichlet", "Uniform",
-        "Yule", "BirthDeath", "Coalescent", "PhyloCTMC", "DiscreteGamma"
-    );
+    public CompletionProvider() {
+        initializeCompletions();
+    }
     
-    // Functions from PhyloSpec
-    private static final List<String> FUNCTIONS = Arrays.asList(
-        "JC69", "K80", "F81", "HKY", "GTR", "WAG", "JTT", "LG",
-        "mrca", "treeHeight", "nodeAge", "branchLength", "sequence",
-        "LessThan", "GreaterThan", "Equals", "Bounded"
-    );
+    private void initializeCompletions() {
+        // Initialize type completions
+        addTypeCompletion("Real", "Real-valued number");
+        addTypeCompletion("Integer", "Integer-valued number");
+        addTypeCompletion("Boolean", "Logical value (true/false)");
+        addTypeCompletion("String", "Text value");
+        addTypeCompletion("Simplex", "Probability vector with elements that sum to 1.0");
+        addTypeCompletion("Vector", "Ordered collection of values");
+        addTypeCompletion("Matrix", "2D grid of values");
+        addTypeCompletion("Tree", "Phylogenetic tree structure");
+        addTypeCompletion("TimeTree", "Time-calibrated tree");
+        addTypeCompletion("Alignment", "Multiple sequence alignment");
+        addTypeCompletion("Sequence", "Biological sequence");
+        addTypeCompletion("QMatrix", "Rate matrix for substitution models");
+        addTypeCompletion("PositiveReal", "Positive real number");
+        addTypeCompletion("Probability", "Probability value");
+        
+        // Initialize distribution completions
+        addDistributionCompletion("Normal", "Normal(mean=0.0, sd=1.0)", "Normal (Gaussian) distribution");
+        addDistributionCompletion("LogNormal", "LogNormal(meanlog=0.0, sdlog=1.0)", "Log-normal distribution for positive values");
+        addDistributionCompletion("Gamma", "Gamma(shape=1.0, rate=1.0)", "Gamma distribution for positive values");
+        addDistributionCompletion("Beta", "Beta(alpha=1.0, beta=1.0)", "Beta distribution for values in (0,1)");
+        addDistributionCompletion("Exponential", "Exponential(rate=1.0)", "Exponential distribution for rate parameters");
+        addDistributionCompletion("Dirichlet", "Dirichlet(alpha=[1.0, 1.0, 1.0, 1.0])", "Dirichlet distribution for probability vectors");
+        addDistributionCompletion("Uniform", "Uniform(lower=0.0, upper=1.0)", "Uniform distribution for bounded values");
+        addDistributionCompletion("Yule", "Yule(birthRate=1.0)", "Yule pure-birth process for trees");
+        addDistributionCompletion("BirthDeath", "BirthDeath(birthRate=1.0, deathRate=0.5)", "Birth-death process for trees");
+        
+        // Initialize function completions
+        addFunctionCompletion("JC69", "JC69()", "Jukes-Cantor model with equal rates");
+        addFunctionCompletion("K80", "K80(kappa=2.0)", "Kimura 2-parameter model");
+        addFunctionCompletion("HKY", "HKY(kappa=2.0, baseFrequencies=${1:[0.25, 0.25, 0.25, 0.25]})", "Hasegawa-Kishino-Yano model");
+        addFunctionCompletion("GTR", "GTR(rateMatrix=${1:[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, baseFrequencies=${2:[0.25, 0.25, 0.25, 0.25]})", "General Time-Reversible model");
+        addFunctionCompletion("LessThan", "LessThan(left=${1:value1}, right=${2:value2})", "Ensures the left value is less than the right value");
+        
+        // Initialize keyword completions
+        addKeywordCompletion("constraint", "constraint ${1:name} = ${2:function};\n", "Define a constraint");
+        addKeywordCompletion("observe", "observe", "Observe a variable");
+        addKeywordCompletion("from", "from", "Specify data source");
+    }
     
-    // Keywords from your grammar
-    private static final List<String> KEYWORDS = Arrays.asList(
-        "constraint", "observe", "from"
-    );
+    private void addTypeCompletion(String name, String documentation) {
+        CompletionItem item = new CompletionItem(name);
+        item.setKind(CompletionItemKind.Class);
+        item.setDetail("Type");
+        item.setDocumentation(documentation);
+        typeCompletions.add(item);
+    }
+    
+    private void addDistributionCompletion(String name, String insertText, String documentation) {
+        CompletionItem item = new CompletionItem(name);
+        item.setKind(CompletionItemKind.Function);
+        item.setDetail("Distribution");
+        item.setDocumentation(documentation);
+        item.setInsertText(insertText);
+        item.setInsertTextFormat(InsertTextFormat.Snippet);
+        distributionCompletions.add(item);
+    }
+    
+    private void addFunctionCompletion(String name, String insertText, String documentation) {
+        CompletionItem item = new CompletionItem(name);
+        item.setKind(CompletionItemKind.Function);
+        item.setDetail("Function");
+        item.setDocumentation(documentation);
+        item.setInsertText(insertText);
+        item.setInsertTextFormat(InsertTextFormat.Snippet);
+        functionCompletions.add(item);
+    }
+    
+    private void addKeywordCompletion(String name, String insertText, String documentation) {
+        CompletionItem item = new CompletionItem(name);
+        item.setKind(CompletionItemKind.Keyword);
+        item.setDetail("Keyword");
+        item.setDocumentation(documentation);
+        item.setInsertText(insertText);
+        item.setInsertTextFormat(InsertTextFormat.Snippet);
+        keywordCompletions.add(item);
+    }
     
     public List<CompletionItem> provideCompletions(String content, int line, int character) {
-        List<CompletionItem> completions = new ArrayList<>();
+        System.out.println("Completion requested at line " + line + ", character " + character);
         
-        // Determine the context where completion is requested
+        // Determine context based on the document content
         CompletionContext context = determineContext(content, line, character);
+        
+        List<CompletionItem> result = new ArrayList<>();
         
         switch (context.getType()) {
             case TYPE_DECLARATION:
-                addTypeCompletions(completions);
+                result.addAll(typeCompletions);
                 break;
+                
             case DISTRIBUTION:
-                addDistributionCompletions(completions);
+                result.addAll(distributionCompletions);
                 break;
+                
             case FUNCTION_CALL:
-                addFunctionCompletions(completions);
+                result.addAll(functionCompletions);
                 break;
-            case VARIABLE_REFERENCE:
-                addVariableCompletions(completions, context.getScope());
-                break;
+                
             case KEYWORD:
-                addKeywordCompletions(completions);
+                result.addAll(keywordCompletions);
                 break;
+                
+            case VARIABLE_REFERENCE:
+                result.addAll(context.getVariables());
+                break;
+                
             default:
-                // Add all possible completions
-                addTypeCompletions(completions);
-                addDistributionCompletions(completions);
-                addFunctionCompletions(completions);
-                addKeywordCompletions(completions);
-                addVariableCompletions(completions, context.getScope());
+                // Add all possible completions for general context
+                result.addAll(typeCompletions);
+                result.addAll(distributionCompletions);
+                result.addAll(functionCompletions);
+                result.addAll(keywordCompletions);
+                result.addAll(context.getVariables());
                 break;
         }
         
-        return completions;
+        System.out.println("Returning " + result.size() + " completion items");
+        return result;
     }
     
     private CompletionContext determineContext(String content, int line, int character) {
-        // Parse the document up to the position to determine context
-        // This is a simplified example - a real implementation would use
-        // the parse tree to more accurately determine context
+        // For now, just a very basic context determination
         String[] lines = content.split("\n");
         
-        // Get text up to cursor position
+        // Make sure the line is valid
         if (line >= lines.length) {
-            return new CompletionContext(CompletionContextType.GENERAL, Collections.emptyList());
+            return new CompletionContext(ContextType.GENERAL, new ArrayList<>());
         }
         
-        String lineText = lines[line];
-        String textUpToCursor = character <= lineText.length() 
-            ? lineText.substring(0, character) 
-            : lineText;
+        String currentLine = lines[line].substring(0, Math.min(character, lines[line].length()));
+        List<CompletionItem> variables = extractVariables(content);
         
-        // Simplified context detection
-        if (textUpToCursor.trim().endsWith("~")) {
-            return new CompletionContext(CompletionContextType.DISTRIBUTION, Collections.emptyList());
-        } else if (textUpToCursor.contains("=") && !textUpToCursor.contains(";")) {
-            return new CompletionContext(CompletionContextType.FUNCTION_CALL, Collections.emptyList());
-        } else if (textUpToCursor.trim().length() == 0 || textUpToCursor.trim().endsWith(";")) {
-            return new CompletionContext(CompletionContextType.TYPE_DECLARATION, Collections.emptyList());
+        // Simple context detection
+        if (currentLine.trim().endsWith("~")) {
+            return new CompletionContext(ContextType.DISTRIBUTION, variables);
+        } else if (currentLine.contains("=") && !currentLine.contains(";")) {
+            if (currentLine.indexOf("=") == currentLine.length() - 1) {
+                return new CompletionContext(ContextType.FUNCTION_CALL, variables);
+            }
+        } else if (currentLine.trim().isEmpty() || currentLine.trim().endsWith(";")) {
+            return new CompletionContext(ContextType.TYPE_DECLARATION, variables);
         }
         
-        // Extract all variables from the document
-        List<String> variables = extractVariables(content);
-        return new CompletionContext(CompletionContextType.VARIABLE_REFERENCE, variables);
+        return new CompletionContext(ContextType.GENERAL, variables);
     }
     
-    private List<String> extractVariables(String content) {
-        // In a real implementation, you would parse the document and extract variables
-        // This is a placeholder
-        List<String> variables = new ArrayList<>();
-        // Extract variables logic would go here
+    private List<CompletionItem> extractVariables(String content) {
+        // This is a placeholder - in a real implementation, you'd parse the document
+        // to extract variable names and types
+        List<CompletionItem> variables = new ArrayList<>();
+        
+        // Basic regex to find variable declarations
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.contains("=") && line.endsWith(";")) {
+                String[] parts = line.split("=")[0].trim().split("\\s+");
+                if (parts.length >= 2) {
+                    String varType = parts[0];
+                    String varName = parts[1];
+                    
+                    CompletionItem item = new CompletionItem(varName);
+                    item.setKind(CompletionItemKind.Variable);
+                    item.setDetail(varType);
+                    variables.add(item);
+                }
+            }
+        }
+        
         return variables;
     }
     
-    private void addTypeCompletions(List<CompletionItem> completions) {
-        for (String type : TYPES) {
-            CompletionItem item = new CompletionItem(type);
-            item.setKind(CompletionItemKind.Class);
-            completions.add(item);
-        }
-    }
-    
-    private void addDistributionCompletions(List<CompletionItem> completions) {
-        for (String dist : DISTRIBUTIONS) {
-            CompletionItem item = new CompletionItem(dist);
-            item.setKind(CompletionItemKind.Function);
-            completions.add(item);
-        }
-    }
-    
-    private void addFunctionCompletions(List<CompletionItem> completions) {
-        for (String func : FUNCTIONS) {
-            CompletionItem item = new CompletionItem(func);
-            item.setKind(CompletionItemKind.Function);
-            completions.add(item);
-        }
-    }
-    
-    private void addKeywordCompletions(List<CompletionItem> completions) {
-        for (String keyword : KEYWORDS) {
-            CompletionItem item = new CompletionItem(keyword);
-            item.setKind(CompletionItemKind.Keyword);
-            completions.add(item);
-        }
-    }
-    
-    private void addVariableCompletions(List<CompletionItem> completions, List<String> variables) {
-        for (String variable : variables) {
-            CompletionItem item = new CompletionItem(variable);
-            item.setKind(CompletionItemKind.Variable);
-            completions.add(item);
-        }
-    }
-    
-    // Helper enum and class for tracking completion context
-    private enum CompletionContextType {
-        TYPE_DECLARATION, DISTRIBUTION, FUNCTION_CALL, VARIABLE_REFERENCE, KEYWORD, GENERAL
+    // Helper enum and class for completion context
+    private enum ContextType {
+        TYPE_DECLARATION, DISTRIBUTION, FUNCTION_CALL, KEYWORD, VARIABLE_REFERENCE, GENERAL
     }
     
     private static class CompletionContext {
-        private final CompletionContextType type;
-        private final List<String> scope;
+        private final ContextType type;
+        private final List<CompletionItem> variables;
         
-        public CompletionContext(CompletionContextType type, List<String> scope) {
+        public CompletionContext(ContextType type, List<CompletionItem> variables) {
             this.type = type;
-            this.scope = scope;
+            this.variables = variables;
         }
         
-        public CompletionContextType getType() {
+        public ContextType getType() {
             return type;
         }
         
-        public List<String> getScope() {
-            return scope;
+        public List<CompletionItem> getVariables() {
+            return variables;
         }
     }
 }

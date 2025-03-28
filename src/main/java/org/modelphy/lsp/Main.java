@@ -4,42 +4,49 @@ import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.services.LanguageClient;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Main {
-    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
-
     public static void main(String[] args) {
+        System.out.println("ModelPhy Language Server starting...");
+        
         try {
-            startServer(System.in, System.out);
+            // Create the language server instance
+            ModelPhyLanguageServer server = new ModelPhyLanguageServer();
+            System.out.println("Server instance created");
+            
+            // Create the JSON RPC launcher for the language server
+            Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(
+                server, 
+                System.in, 
+                System.out
+            );
+            System.out.println("Launcher created");
+            
+            // Get the client proxy
+            LanguageClient client = launcher.getRemoteProxy();
+            System.out.println("Client proxy obtained");
+            
+            // Connect the server to the client
+            server.connect(client);
+            System.out.println("Server connected to client");
+            
+            // Start listening for client messages
+            Future<?> startListening = launcher.startListening();
+            System.out.println("Started listening for client messages");
+            
+            // Wait until the communication is shut down
+            startListening.get();
+            System.out.println("Communication shutdown received");
         } catch (InterruptedException | ExecutionException e) {
-            LOGGER.log(Level.SEVERE, "Exception while starting language server", e);
+            System.err.println("Fatal error in language server: " + e.getMessage());
+            e.printStackTrace(System.err);
+            System.exit(1);
+        } catch (Exception e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            e.printStackTrace(System.err);
             System.exit(1);
         }
-    }
-
-    private static void startServer(InputStream in, OutputStream out) throws InterruptedException, ExecutionException {
-        // Create the language server instance
-        ModelPhyLanguageServer server = new ModelPhyLanguageServer();
-
-        // Create the JSON RPC launcher for the language server
-        Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, in, out);
-
-        // Get the client proxy
-        LanguageClient client = launcher.getRemoteProxy();
-
-        // Connect the server to the client
-        server.connect(client);
-
-        // Start listening for client messages
-        Future<?> startListening = launcher.startListening();
-
-        // Wait until the communication is shut down
-        startListening.get();
     }
 }

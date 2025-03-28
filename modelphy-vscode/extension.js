@@ -14,6 +14,10 @@ function activate(context) {
         serverPath = context.asAbsolutePath(path.join('server', 'modelphy-lsp-server.jar'));
     }
     
+    const fs = require('fs');
+    console.log('Server path:', serverPath);
+    console.log('Server file exists:', fs.existsSync(serverPath));
+    
     // Server options - the command to start the language server
     const serverOptions = {
         run: {
